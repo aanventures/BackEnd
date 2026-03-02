@@ -2,21 +2,22 @@ const dotenv = require('dotenv')
 const path = require('path')
 const mongoose = require('mongoose')
 
-// Load env
-dotenv.config({ path: path.join(__dirname, '..', '.env') })
+// Load environment variables from .env in project root
+dotenv.config({ path: path.join(__dirname, '.env') })
 
 const app = require('./app')
+const console = require('console')
 
 let server
-
+console.log('Starting server...', { env: process.env.NODE_ENV, port: process.env.PORT })
 async function startServer(port = process.env.PORT || 3000) {
 	try {
+		// connect to mongo via config helper
 		if (process.env.MONGO_URI) {
-			await mongoose.connect(process.env.MONGO_URI, {
-				useNewUrlParser: true,
-				useUnifiedTopology: true
-			})
-			console.log('MongoDB connected')
+			const connectDB = require('./config/db');
+			await connectDB(process.env.MONGO_URI);
+		} else {
+			throw new Error('MONGO_URI must be provided');
 		}
 
 		server = app.listen(port, () => {
