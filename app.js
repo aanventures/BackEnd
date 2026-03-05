@@ -5,10 +5,12 @@ app.use(express.json())
 
 // Routes
 const userRoutes = require('./routes/user.route')
+const adminRoutes = require('./routes/admin.route')
 const propertyRoutes = require('./routes/property.route')
 const blogRoutes = require('./routes/blog.route')
 
 app.use('/api/users', userRoutes)
+app.use('/api/admins', adminRoutes)
 app.use('/api/properties', propertyRoutes)
 app.use('/api/blogs', blogRoutes)
 
