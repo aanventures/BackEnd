@@ -51,10 +51,17 @@ exports.mobileLogin = async (req, res) => {
     }
 }
 
+<<<<<<< HEAD
 // User Signup
 exports.userSignup = async (req, res) => {
   try {
     const { name, email, password, mobile } = req.body;
+=======
+// Generic Signup function
+exports.signup = async (req, res) => {
+	try {
+		const { name, email, password, mobile, role = 'user' } = req.body
+>>>>>>> 800594d (seprate admin login removed)
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -64,6 +71,7 @@ exports.userSignup = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -85,10 +93,42 @@ exports.userSignup = async (req, res) => {
         url: "default-avatar-url",
       },
     });
+=======
+		// Validate role
+		if (!['user', 'admin'].includes(role)) {
+			return res.status(400).json({
+				success: false,
+				message: 'Invalid role. Must be either "user" or "admin"'
+			})
+		}
+
+		// Check if user already exists
+		const existingUser = await User.findOne({ email })
+		if (existingUser) {
+			return res.status(400).json({
+				success: false,
+				message: 'User already exists with this email'
+			})
+		}
+
+		// Create new user
+		const user = await User.create({
+			name,
+			email,
+			password,
+			mobile,
+			role,
+			avatar: {
+				public_id: 'default',
+				url: 'default-avatar-url'
+			}
+		})
+>>>>>>> 800594d (seprate admin login removed)
 
     // Generate token
     const token = generateToken(user._id, user.role);
 
+<<<<<<< HEAD
     // Return response
     res.status(201).json({
       success: true,
@@ -110,6 +150,29 @@ exports.userSignup = async (req, res) => {
 exports.userLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
+=======
+		// Return response
+		res.status(201).json({
+			success: true,
+			message: `${role.charAt(0).toUpperCase() + role.slice(1)} registered successfully`,
+			token,
+			user: {
+				id: user._id,
+				name: user.name,
+				email: user.email,
+				role: user.role
+			}
+		})
+	} catch (err) {
+		res.status(400).json({ success: false, message: err.message })
+	}
+}
+
+// Generic Login function
+exports.login = async (req, res) => {
+	try {
+		const { email, password } = req.body
+>>>>>>> 800594d (seprate admin login removed)
 
     // Validate required fields
     if (!email || !password) {
@@ -130,6 +193,7 @@ exports.userLogin = async (req, res) => {
       });
     }
 
+<<<<<<< HEAD
     // Check if user role is 'user'
     if (user.role !== "user") {
       return res.status(401).json({
@@ -146,6 +210,16 @@ exports.userLogin = async (req, res) => {
         message: "Invalid email or password",
       });
     }
+=======
+		// Compare password
+		const isPasswordMatch = await user.comparePassword(password)
+		if (!isPasswordMatch) {
+			return res.status(401).json({
+				success: false,
+				message: 'Invalid email or password'
+			})
+		}
+>>>>>>> 800594d (seprate admin login removed)
 
     // Generate token
     const token = generateToken(user._id, user.role);
@@ -166,6 +240,28 @@ exports.userLogin = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+// User Signup (defaults to user role)
+exports.userSignup = async (req, res) => {
+	req.body.role = 'user'
+	return exports.signup(req, res)
+}
+
+// Admin Signup
+exports.adminSignup = async (req, res) => {
+	req.body.role = 'admin'
+	return exports.signup(req, res)
+}
+
+// User Login (will work for both users and admins)
+exports.userLogin = async (req, res) => {
+	return exports.login(req, res)
+}
+
+// Admin Login (same as user login, but can be used for clarity)
+exports.adminLogin = async (req, res) => {
+	return exports.login(req, res)
+}
 
 // Create a new user
 exports.createUser = async (req, res) => {
@@ -223,6 +319,7 @@ exports.updateUser = async (req, res) => {
 
 // Delete user by id
 exports.deleteUser = async (req, res) => {
+<<<<<<< HEAD
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user)
@@ -234,3 +331,97 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+=======
+	try {
+		const user = await User.findByIdAndDelete(req.params.id)
+		if (!user) return res.status(404).json({ success: false, message: 'User not found' })
+		res.status(200).json({ success: true, message: 'User deleted' })
+	} catch (err) {
+		res.status(500).json({ success: false, message: err.message })
+	}
+}
+
+// Admin-specific functions
+
+// Get all admins
+exports.getAllAdmins = async (req, res) => {
+	try {
+		const admins = await User.find({ role: 'admin' })
+		res.status(200).json({
+			success: true,
+			count: admins.length,
+			data: admins
+		})
+	} catch (err) {
+		res.status(500).json({ success: false, message: err.message })
+	}
+}
+
+// Get admin by id
+exports.getAdminById = async (req, res) => {
+	try {
+		const admin = await User.findById(req.params.id)
+
+		// Check if user exists and is an admin
+		if (!admin || admin.role !== 'admin') {
+			return res.status(404).json({
+				success: false,
+				message: 'Admin not found'
+			})
+		}
+
+		res.status(200).json({ success: true, data: admin })
+	} catch (err) {
+		res.status(500).json({ success: false, message: err.message })
+	}
+}
+
+// Update admin by id
+exports.updateAdmin = async (req, res) => {
+	try {
+		const updates = req.body
+		if (updates.password) delete updates.password // prefer separate password endpoint
+		if (updates.role) delete updates.role // prevent role change
+
+		const admin = await User.findByIdAndUpdate(req.params.id, updates, {
+			new: true,
+			runValidators: true
+		})
+
+		// Check if user exists and is an admin
+		if (!admin || admin.role !== 'admin') {
+			return res.status(404).json({
+				success: false,
+				message: 'Admin not found'
+			})
+		}
+
+		res.status(200).json({ success: true, data: admin })
+	} catch (err) {
+		res.status(400).json({ success: false, message: err.message })
+	}
+}
+
+// Delete admin by id
+exports.deleteAdmin = async (req, res) => {
+	try {
+		const admin = await User.findById(req.params.id)
+
+		// Check if user exists and is an admin
+		if (!admin || admin.role !== 'admin') {
+			return res.status(404).json({
+				success: false,
+				message: 'Admin not found'
+			})
+		}
+
+		await User.findByIdAndDelete(req.params.id)
+		res.status(200).json({
+			success: true,
+			message: 'Admin deleted successfully'
+		})
+	} catch (err) {
+		res.status(500).json({ success: false, message: err.message })
+	}
+}
+>>>>>>> 800594d (seprate admin login removed)

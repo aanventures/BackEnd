@@ -2,9 +2,15 @@ const express = require('express')
 const router = express.Router()
 const userController = require('../controllers/user.controller')
 
-// Authentication routes
-router.post('/signup', userController.userSignup)
-router.post('/login', userController.userLogin)
+// Authentication routes (works for both users and admins based on role)
+router.post('/signup', userController.signup)
+router.post('/login', userController.login)
+
+// Admin management routes
+router.get('/admin', userController.getAllAdmins)
+router.get('/admin/:id', userController.getAdminById)
+router.put('/admin/:id', userController.updateAdmin)
+router.delete('/admin/:id', userController.deleteAdmin)
 
 // Regular CRUD routes
 router.post('/', userController.createUser)

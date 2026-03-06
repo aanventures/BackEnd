@@ -1,19 +1,19 @@
 # User & Admin Authentication API Documentation
 
 ## Overview
-This documentation covers the login and signup endpoints for both regular users and admins.
+This documentation covers the unified login and signup endpoints for both regular users and admins using role-based authentication.
 
 ## Base URL
 ```
-http://localhost:5000/api
+http://localhost:5000/api/users
 ```
 
 ---
 
-## User Endpoints
+## Authentication Endpoints
 
-### 1. User Signup
-**Endpoint:** `POST /users/signup`
+### 1. Unified Signup
+**Endpoint:** `POST /signup`
 
 **Request Body:**
 ```json
@@ -21,9 +21,15 @@ http://localhost:5000/api
   "name": "John Doe",
   "email": "john@example.com",
   "password": "SecurePassword123",
-  "mobile": 9876543210
+  "mobile": 9876543210,
+  "role": "user"
 }
 ```
+
+**Notes:**
+- The `role` field is **required** and must be either "user" or "admin"
+- Creates user or admin account based on the specified role
+- If role is not provided, defaults to "user"
 
 **Response (Success - 201):**
 ```json
@@ -40,18 +46,10 @@ http://localhost:5000/api
 }
 ```
 
-**Response (Error - 400):**
-```json
-{
-  "success": false,
-  "message": "User already exists with this email"
-}
-```
-
 ---
 
-### 2. User Login
-**Endpoint:** `POST /users/login`
+### 2. Unified Login
+**Endpoint:** `POST /login`
 
 **Request Body:**
 ```json
@@ -60,6 +58,11 @@ http://localhost:5000/api
   "password": "SecurePassword123"
 }
 ```
+
+**Notes:**
+- Works for both users and admins based on email/role in database
+- No need to specify role - automatically detected from user account
+- Returns the user's role in the response
 
 **Response (Success - 200):**
 ```json
@@ -76,94 +79,49 @@ http://localhost:5000/api
 }
 ```
 
-**Response (Error - 401):**
+---
+
+## Examples
+
+### Creating a User Account
 ```json
+POST /api/users/signup
 {
-  "success": false,
-  "message": "Invalid email or password"
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "SecurePassword123",
+  "mobile": 9876543210,
+  "role": "user"
 }
 ```
 
----
-
-## Admin Endpoints
-
-### 1. Admin Signup
-**Endpoint:** `POST /admins/signup`
-
-**Request Body:**
+### Creating an Admin Account
 ```json
+POST /api/users/signup
 {
   "name": "Admin User",
   "email": "admin@example.com",
   "password": "AdminPassword123",
-  "mobile": 9876543210
+  "mobile": 9876543210,
+  "role": "admin"
 }
 ```
 
-**Response (Success - 201):**
+### User/Admin Login (Same Endpoint)
 ```json
-{
-  "success": true,
-  "message": "Admin registered successfully",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "507f1f77bcf86cd799439011",
-    "name": "Admin User",
-    "email": "admin@example.com",
-    "role": "admin"
-  }
-}
-```
-
-**Response (Error - 400):**
-```json
-{
-  "success": false,
-  "message": "Admin already exists with this email"
-}
-```
-
----
-
-### 2. Admin Login
-**Endpoint:** `POST /admins/login`
-
-**Request Body:**
-```json
+POST /api/users/login
 {
   "email": "admin@example.com",
   "password": "AdminPassword123"
 }
 ```
 
-**Response (Success - 200):**
-```json
-{
-  "success": true,
-  "message": "Admin login successful",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "507f1f77bcf86cd799439011",
-    "name": "Admin User",
-    "email": "admin@example.com",
-    "role": "admin"
-  }
-}
-```
-
-**Response (Error - 401):**
-```json
-{
-  "success": false,
-  "message": "Invalid email or password"
-}
-```
-
 ---
 
-### 3. Get All Admins
-**Endpoint:** `GET /admins`
+## Admin Management Endpoints
+
+### 1. Get All Admins
+**Endpoint:** `GET /admin`
 
 **Headers:**
 ```
@@ -188,8 +146,8 @@ Authorization: Bearer <token>
 
 ---
 
-### 4. Get Admin by ID
-**Endpoint:** `GET /admins/:id`
+### 2. Get Admin by ID
+**Endpoint:** `GET /admin/:id`
 
 **Headers:**
 ```
@@ -211,8 +169,8 @@ Authorization: Bearer <token>
 
 ---
 
-### 5. Update Admin
-**Endpoint:** `PUT /admins/:id`
+### 3. Update Admin
+**Endpoint:** `PUT /admin/:id`
 
 **Headers:**
 ```
@@ -243,8 +201,8 @@ Authorization: Bearer <token>
 
 ---
 
-### 6. Delete Admin
-**Endpoint:** `DELETE /admins/:id`
+### 4. Delete Admin
+**Endpoint:** `DELETE /admin/:id`
 
 **Headers:**
 ```
@@ -258,6 +216,35 @@ Authorization: Bearer <token>
   "message": "Admin deleted successfully"
 }
 ```
+
+---
+
+## User Management Endpoints
+
+### 1. Create User
+**Endpoint:** `POST /`
+
+**Request Body:**
+```json
+{
+  "name": "New User",
+  "email": "newuser@example.com",
+  "password": "Password123",
+  "mobile": 9876543210
+}
+```
+
+### 2. Get All Users
+**Endpoint:** `GET /`
+
+### 3. Get User by ID
+**Endpoint:** `GET /:id`
+
+### 4. Update User
+**Endpoint:** `PUT /:id`
+
+### 5. Delete User
+**Endpoint:** `DELETE /:id`
 
 ---
 
@@ -326,5 +313,7 @@ MONGODB_URI=your_mongodb_connection_string
 
 - Passwords are hashed using bcryptjs before storage
 - JWT tokens expire after 7 days by default
-- Admin and User roles are strictly separated during login
+- Role-based authentication: specify "user" or "admin" role during signup
+- Single login endpoint works for both users and admins
 - Passwords are excluded from response bodies for security
+- Admin management routes are available under `/admin/*` paths
