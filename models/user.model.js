@@ -1,47 +1,44 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const validator = require("validator");
+const jwt = require("jsonwebtoken"); // Added for token generation
 
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, "Please enter your name"],
     maxLength: [30, "Name cannot exceed 30 characters"],
     minLength: [4, "Name should have more than 4 characters"],
   },
   email: {
     type: String,
-    required: [true, "Please enter your email"],
     unique: true,
+    sparse: true, // Use sparse if email isn't always required (e.g. mobile-only users)
     validate: [validator.isEmail, "Please enter a valid email"],
   },
   password: {
     type: String,
-    required: [true, "Please enter your password"],
     minLength: [8, "Password should have more than 8 characters"],
     select: false,
   },
   mobile: {
     type: Number,
+    unique: true,
+    sparse: true,
   },
-  otp: {
-    type: Number,
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true,
   },
+  otp: Number,
   isVerify: {
     type: Boolean,
+    default: false,
   },
-  isExpired: {
-    type: Date(),
-  },
+  isExpired: Date,
   avatar: {
-    public_id: {
-      type: String,
-      required: true,
-    },
-    url: {
-      type: String,
-      required: true,
-    },
+    public_id: String,
+    url: String,
   },
   role: {
     type: String,
@@ -49,21 +46,26 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+}, { timestamps: true });
+
+// FIX: For Async hooks, remove 'next' and just return or finish the function
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (err) {
-    next(err);
-  }
-});
-
+// Helper: Compare Password
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Helper: Generate JWT Token
+userSchema.methods.getJWTToken = function () {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || "7d",
+  });
 };
 
 const User = mongoose.model("User", userSchema);

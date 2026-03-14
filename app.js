@@ -1,5 +1,10 @@
 const express = require('express')
 const cors = require("cors")
+// Routes
+const userRoutes = require('./routes/user.route')
+const propertyRoutes = require('./routes/property.route')
+const blogRoutes = require('./routes/blog.route');
+const cookieParser = require('cookie-parser');
 const app = express()
 
 const corsOptions = {
@@ -11,15 +16,13 @@ const corsOptions = {
 
 // 2. Use CORS middleware before your routes
 app.use(cors(corsOptions))
-
 app.use(express.json())
+app.use(cookieParser());
 
-// Routes
-const userRoutes = require('./routes/user.route')
-const propertyRoutes = require('./routes/property.route')
-const blogRoutes = require('./routes/blog.route')
 
-app.use('/api/users', userRoutes)
+
+
+app.use('/api/users', userRoutes)   
 app.use('/api/properties', propertyRoutes)
 app.use('/api/blogs', blogRoutes)
 
