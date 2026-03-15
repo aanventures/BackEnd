@@ -1,4 +1,6 @@
 const Blog = require('../models/blog.model')
+const cloudinary = require('../config/cloudinary')
+
 // Create a new Blog
 exports.createBlog = async (req, res) => {
   try {
@@ -12,12 +14,29 @@ exports.createBlog = async (req, res) => {
       });
     }
 
+    let imageUrl = ""
+
+    if (req.file) {
+      const result = await cloudinary.uploader.upload_stream(
+        { folder: "blogs" },
+        async (err, result) => {
+          if (err) {
+            return res.status(500).json({
+              success: false,
+              message: err.message
+            })
+          }
+        }
+      )
+    }
+
+    imageUrl = result.secure_url
     // 2. Create the blog
     const blog = await Blog.create({
       title,
       content, 
       description,
-      image,
+      image: imageUrl,
       author 
     });
 
