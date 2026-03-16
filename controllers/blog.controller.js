@@ -1,8 +1,5 @@
-// Import the configured cloudinary instance directly
-const cloudinary = require("../config/cloudinary");
-const Blog = require("../models/blog.model");
-const sharp = require("sharp");
-
+const Blog = require('../models/blog.model')
+// Create a new Blog
 exports.createBlog = async (req, res) => {
   try {
     const { title, content, excerpt, category, status, isFeatured } = req.body;
@@ -15,86 +12,14 @@ exports.createBlog = async (req, res) => {
       });
     }
 
-    let blogData = {
+    // 2. Create the blog
+    const blog = await Blog.create({
       title,
-      content,
-      excerpt,
-      author: userId,
-      category,
-      status: status || "published",
-      home_page: isFeatured === "true" || isFeatured === true,
-    };
-
-    if (req.file) {
-      try {
-        const optimizedBuffer = await sharp(req.file.buffer)
-          .resize(1600, null, {
-            withoutEnlargement: true,
-            fit: "inside",
-          })
-          .webp({ quality: 80 })
-          .toBuffer();
-
-        const uploadToCloudinary = (buffer) => {
-          return new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-              {
-                folder: "blogs",
-                format: "webp",
-                eager: [
-                  {
-                    width: 1200,
-                    height: 800,
-                    crop: "fill",
-                    gravity: "auto",
-                    quality: "auto",
-                    format: "webp",
-                  },
-                  {
-                    width: 800,
-                    height: 600,
-                    crop: "fill",
-                    gravity: "auto",
-                    quality: "auto",
-                    format: "webp",
-                  },
-                  {
-                    width: 450,
-                    height: 300,
-                    crop: "fill",
-                    gravity: "auto",
-                    quality: "auto",
-                    format: "webp",
-                  },
-                ],
-                eager_async: false,
-              },
-              (error, result) => {
-                if (error) return reject(error);
-                resolve(result);
-              },
-            );
-            uploadStream.end(buffer);
-          });
-        };
-
-        const result = await uploadToCloudinary(optimizedBuffer);
-
-        blogData.image = {
-          public_id: result.public_id,
-          url: result.secure_url,
-          // 4. Optionally save responsive versions to the DB
-          responsive_urls: result.eager.map((img) => img.secure_url),
-        };
-      } catch (imageError) {
-        return res.status(500).json({
-          success: false,
-          message: "Image optimization failed: " + imageError.message,
-        });
-      }
-    }
-
-    const blog = await Blog.create(blogData);
+      content, 
+      description,
+      image,
+      author 
+    });
 
     res.status(201).json({
       success: true,
