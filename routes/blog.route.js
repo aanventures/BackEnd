@@ -12,7 +12,7 @@ router.post('/', verifyToken,isAdmin, upload.single('image'), createBlog);
 router.get('/:slug', getBlogBySlug);
 
 // Public routes
-router.get('/', getAllBlogs);
+router.get('/', getAllBlogs);   
 router.get('/:id', getBlogById);
 
 // Protected routes (Only logged-in users/admins)
