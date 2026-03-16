@@ -9,16 +9,13 @@ exports.sendToken = (user, statusCode, res, message) => {
   );
 
   // 2. Define Cookie Options
-  const isProduction = process.env.NODE_ENV === "production";
-
   const options = {
     expires: new Date(
-      Date.now() + (Number(process.env.COOKIE_EXPIRE) || 7) * 24 * 60 * 60 * 1000
+      Date.now() + Number(process.env.COOKIE_EXPIRE) * 24 * 60 * 60 * 1000
     ),
-    httpOnly: true, // Prevents XSS attacks
-    path: "/",
-    secure: isProduction ? true : false, 
-    sameSite: isProduction ? "none" : "lax",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", 
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", 
   };
 
   // 3. Send Response
@@ -33,7 +30,6 @@ exports.sendToken = (user, statusCode, res, message) => {
       mobile: user.mobile,
       avatar: user.avatar,
     },
-    // Keep this for debugging, but Redux should rely on the Cookie
     token 
   });
 };
