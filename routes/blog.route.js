@@ -1,16 +1,27 @@
-const express = require('express')
-const router = express.Router()
-const blogController = require('../controllers/blog.controller')
+const express = require('express');
+const router = express.Router();
+const multer = require('multer');
+const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
+const { getBlogBySlug, createBlog, getBlogById, getAllBlogs, updateBlog, deleteBlog, likeBlog, addComment, deleteComment } = require("../controllers/blog.controller")
 
-router.post('/', blogController.createBlog)
-router.get('/', blogController.getAllBlogs)
-router.get('/:id', blogController.getBlogById)
-router.put('/:id', blogController.updateBlog)
-router.delete('/:id', blogController.deleteBlog)
+// Configure Multer for temporary storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// interactions
-router.post('/:id/like', blogController.likeBlog)
-router.post('/:id/comment', blogController.addComment)
-router.delete('/:id/comment/:commentId', blogController.deleteComment)
+router.post('/', verifyToken,isAdmin, upload.single('image'), createBlog);
+router.get('/:slug', getBlogBySlug);
 
-module.exports = router
+// Public routes
+router.get('/', getAllBlogs);
+router.get('/:id', getBlogById);
+
+// Protected routes (Only logged-in users/admins)
+router.put('/:id', verifyToken, upload.single('image'), updateBlog);
+router.delete('/:id', verifyToken, deleteBlog);
+
+// Interactions
+router.post('/:id/like', verifyToken, likeBlog);
+router.post('/:id/comment', verifyToken, addComment);
+router.delete('/:id/comment/:commentId', verifyToken, deleteComment);
+
+module.exports = router;

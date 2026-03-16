@@ -42,7 +42,7 @@ exports.authenticate = async (req, res) => {
       user = await User.findOne({ mobile });
       if (!user) {
         user = await User.create({
-          name: name || `User_${mobile.toString().slice(-4)}`,
+          name: name || `User`,
           mobile,
           isVerify: true,
           role: role || "user",
