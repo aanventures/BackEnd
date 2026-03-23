@@ -4,6 +4,7 @@ const cors = require("cors");
 const userRoutes = require("./routes/user.route");
 const propertyRoutes = require("./routes/property.route");
 const blogRoutes = require("./routes/blog.route");
+const FlightRoutes = require("./routes/flight.route")
 const cookieParser = require("cookie-parser");
 const app = express();
 
@@ -11,6 +12,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://tripaango-frontend.netlify.app",
 ];
+
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -38,6 +40,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/users", userRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/blogs", blogRoutes);
+app.use("/api/flight", FlightRoutes)
+
 
 // 4. 404 Route Handler
 app.use((req, res, next) => {

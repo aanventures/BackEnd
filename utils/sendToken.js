@@ -8,12 +8,15 @@ exports.sendToken = (user, statusCode, res, message) => {
     { expiresIn: process.env.JWT_EXPIRE || "7d" }
   );
 
-  // 2. Define Cookie Options
+  // 2. Define Cookie Options - Added fallback for COOKIE_EXPIRE
+  const cookieDays = process.env.COOKIE_EXPIRE ? Number(process.env.COOKIE_EXPIRE) : 7;
+
   const options = {
     expires: new Date(
-      Date.now() + Number(process.env.COOKIE_EXPIRE) * 24 * 60 * 60 * 1000
+      Date.now() + cookieDays * 24 * 60 * 60 * 1000
     ),
     httpOnly: true,
+    // If you are testing on Localhost (Chrome), secure must be false
     secure: process.env.NODE_ENV === "production", 
     sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", 
   };

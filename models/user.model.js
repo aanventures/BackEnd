@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     unique: true,
-    sparse: true, // Use sparse if email isn't always required (e.g. mobile-only users)
+    sparse: true, 
     validate: [validator.isEmail, "Please enter a valid email"],
   },
   password: {
@@ -57,8 +57,8 @@ userSchema.pre("save", async function () {
 });
 
 // Helper: Compare Password
-userSchema.methods.comparePassword = async function (enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
+userSchema.methods.comparePassword = async function(enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
 };
 
 // Helper: Generate JWT Token
