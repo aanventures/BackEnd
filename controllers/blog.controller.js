@@ -252,6 +252,98 @@ exports.updateBlog = async (req, res) => {
   }
 };
 
+// add blog multiple image 
+exports.updateBlogGallery = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titles, existingImages } = req.body;
+
+    const blog = await Blog.findById(id);
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+
+    let updatedGallery = [];
+    let fileIndex = 0;
+
+    // Normalize inputs to arrays
+    const titlesArray = Array.isArray(titles) ? titles : (titles ? [titles] : []);
+    const existingArray = Array.isArray(existingImages) ? existingImages : (existingImages ? [existingImages] : []);
+
+    // Helper function to handle the stream upload correctly
+    const uploadToCloudinary = (file) => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "blog_galleries",
+            quality: "auto",
+            fetch_format: "auto",
+            width: 1200,
+            crop: "limit"
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        // Use .buffer if using memoryStorage, or .path if using diskStorage
+        uploadStream.end(file.buffer); 
+      });
+    };
+
+    // Iterate through titles to maintain order
+    for (let i = 0; i < titlesArray.length; i++) {
+      
+      // Case 1: New file uploaded
+      if (req.files && req.files[fileIndex]) {
+        try {
+          const result = await uploadToCloudinary(req.files[fileIndex]);
+          
+          updatedGallery.push({
+            title: titlesArray[i] || "",
+            public_id: result.public_id,
+            url: result.secure_url,
+          });
+          fileIndex++;
+        } catch (uploadErr) {
+          console.error("Cloudinary Upload Error:", uploadErr);
+        }
+      } 
+      // Case 2: Keep existing image
+      else if (existingArray[i]) {
+        const originalImg = blog.gallery.find(img => img.url === existingArray[i]);
+        updatedGallery.push({
+          title: titlesArray[i] || "",
+          url: existingArray[i],
+          public_id: originalImg ? originalImg.public_id : "manual_entry",
+        });
+      }
+    }
+
+    // Cleanup: Delete removed images from Cloudinary
+    const removedImages = blog.gallery.filter(
+      (oldImg) => !updatedGallery.find((newImg) => newImg.url === oldImg.url)
+    );
+    
+    for (const img of removedImages) {
+      if (img.public_id && img.public_id !== "manual_entry") {
+        await cloudinary.uploader.destroy(img.public_id);
+      }
+    }
+
+    blog.gallery = updatedGallery;
+    await blog.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Gallery updated and optimized successfully!",
+      gallery: blog.gallery,
+    });
+  } catch (error) {
+    console.error("Gallery Update Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 // Delete Blog
 exports.deleteBlog = async (req, res) => {
   try {

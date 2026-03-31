@@ -55,6 +55,23 @@ const blogSchema = new mongoose.Schema(
         required: false,
       },
     },
+    gallery: [
+      {
+        title: {
+          type: String,
+          trim: true,
+          default: "",
+        },
+        public_id: {
+          type: String,
+          required: true,
+        },
+        url: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
     category: {
       type: String,
       required: [true, "Please select a category"],
