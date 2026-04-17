@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
-const { getBlogBySlug, createBlog, getBlogById, getAllBlogs, updateBlog, deleteBlog, likeBlog, addComment, deleteComment, updateBlogGallery } = require("../controllers/blog.controller")
+const { getBlogBySlug, createBlog, getBlogById, getAllBlogs, updateBlog, deleteBlog, likeBlog, addComment, deleteComment, updateBlogGallery, deleteBlogGalleryImage } = require("../controllers/blog.controller")
 
 // Configure Multer for temporary storage
 const storage = multer.memoryStorage();
@@ -18,6 +18,7 @@ router.get('/:id', getBlogById);
 // Protected routes (Only logged-in users/admins)
 router.put('/:id', verifyToken, upload.single('image'), updateBlog);
 router.patch("/:id/gallery", upload.array("images"), updateBlogGallery);
+router.delete("/:id/gallery/:imageId", verifyToken, isAdmin, deleteBlogGalleryImage);
 router.delete('/:id', verifyToken, deleteBlog);
 
 // Interactions

@@ -252,25 +252,25 @@ exports.updateBlog = async (req, res) => {
   }
 };
 
-// add blog multiple image 
 exports.updateBlogGallery = async (req, res) => {
   try {
     const { id } = req.params;
-    const { titles, existingImages } = req.body;
 
     const blog = await Blog.findById(id);
     if (!blog) {
       return res.status(404).json({ success: false, message: "Blog not found" });
     }
 
-    let updatedGallery = [];
-    let fileIndex = 0;
+    // Normalize arrays from body
+    const titlesArray = req.body.titles || req.body["titles[]"] || [];
+    const existingArray = req.body.existingImages || req.body["existingImages[]"] || [];
 
-    // Normalize inputs to arrays
-    const titlesArray = Array.isArray(titles) ? titles : (titles ? [titles] : []);
-    const existingArray = Array.isArray(existingImages) ? existingImages : (existingImages ? [existingImages] : []);
+    const normalizedTitles = Array.isArray(titlesArray) ? titlesArray : [titlesArray];
+    const normalizedExisting = Array.isArray(existingArray) ? existingArray : [existingArray];
 
-    // Helper function to handle the stream upload correctly
+    const files = req.files || [];
+
+    // Helper: upload to Cloudinary
     const uploadToCloudinary = (file) => {
       return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -279,64 +279,56 @@ exports.updateBlogGallery = async (req, res) => {
             quality: "auto",
             fetch_format: "auto",
             width: 1200,
-            crop: "limit"
+            crop: "limit",
           },
           (error, result) => {
             if (error) return reject(error);
             resolve(result);
           }
         );
-        // Use .buffer if using memoryStorage, or .path if using diskStorage
-        uploadStream.end(file.buffer); 
+        uploadStream.end(file.buffer);
       });
     };
 
-    // Iterate through titles to maintain order
-    for (let i = 0; i < titlesArray.length; i++) {
-      
-      // Case 1: New file uploaded
-      if (req.files && req.files[fileIndex]) {
-        try {
-          const result = await uploadToCloudinary(req.files[fileIndex]);
-          
-          updatedGallery.push({
-            title: titlesArray[i] || "",
-            public_id: result.public_id,
-            url: result.secure_url,
-          });
-          fileIndex++;
-        } catch (uploadErr) {
-          console.error("Cloudinary Upload Error:", uploadErr);
-        }
-      } 
-      // Case 2: Keep existing image
-      else if (existingArray[i]) {
-        const originalImg = blog.gallery.find(img => img.url === existingArray[i]);
+    // Start with existing gallery
+    let updatedGallery = [...blog.gallery];
+
+    // Add new files
+    for (let i = 0; i < files.length; i++) {
+      const result = await uploadToCloudinary(files[i]);
+      updatedGallery.push({
+        title: normalizedTitles[i] || "",
+        public_id: result.public_id,
+        url: result.secure_url,
+      });
+    }
+
+    // Add existing images (keep them, update title if provided)
+    for (let i = 0; i < normalizedExisting.length; i++) {
+      const existingUrl = normalizedExisting[i];
+      const existingTitle = normalizedTitles[i] || "";
+
+      const existingImg = updatedGallery.find(img => img.url === existingUrl);
+      if (existingImg) {
+        existingImg.title = existingTitle || existingImg.title;
+      } else {
         updatedGallery.push({
-          title: titlesArray[i] || "",
-          url: existingArray[i],
-          public_id: originalImg ? originalImg.public_id : "manual_entry",
+          title: existingTitle,
+          url: existingUrl,
+          public_id: "manual_entry",
         });
       }
     }
 
-    // Cleanup: Delete removed images from Cloudinary
-    const removedImages = blog.gallery.filter(
-      (oldImg) => !updatedGallery.find((newImg) => newImg.url === oldImg.url)
-    );
-    
-    for (const img of removedImages) {
-      if (img.public_id && img.public_id !== "manual_entry") {
-        await cloudinary.uploader.destroy(img.public_id);
-      }
-    }
+    // ✅ IMPORTANT: Do NOT delete anything here unless you implement explicit "remove" logic
+    // So we skip the cleanup step that was deleting removed images
 
     blog.gallery = updatedGallery;
     await blog.save();
 
     res.status(200).json({
       success: true,
-      message: "Gallery updated and optimized successfully!",
+      message: "Gallery updated successfully!",
       gallery: blog.gallery,
     });
   } catch (error) {
@@ -344,6 +336,42 @@ exports.updateBlogGallery = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.deleteBlogGalleryImage = async (req, res) => {
+  try {
+    const { id, imageId } = req.params;
+
+    const blog = await Blog.findById(id);
+    if (!blog) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
+
+    const imageToRemove = blog.gallery.id(imageId); // find by _id in gallery subdocument
+    if (!imageToRemove) {
+      return res.status(404).json({ success: false, message: "Image not found" });
+    }
+
+    // Delete from Cloudinary if it has a public_id
+    if (imageToRemove.public_id && imageToRemove.public_id !== "manual_entry") {
+      await cloudinary.uploader.destroy(imageToRemove.public_id);
+    }
+
+    // Remove from gallery array
+    blog.gallery.pull({ _id: imageId });
+    await blog.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Image removed successfully",
+      gallery: blog.gallery,
+    });
+  } catch (error) {
+    console.error("Gallery Delete Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
 // Delete Blog
 exports.deleteBlog = async (req, res) => {
   try {

@@ -64,10 +64,11 @@ const blogSchema = new mongoose.Schema(
         },
         public_id: {
           type: String,
-          required: true,
+          required: false,
+          default: "manual_entry", // ✅ Fix
         },
         url: {
-          type: String,
+          type: String, 
           required: true,
         },
       },
